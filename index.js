@@ -1,5 +1,5 @@
 import express from "express";
-import qrcode from "qrcode-terminal";
+import QRCode from "qrcode";
 import { google } from "googleapis";
 
 // Import corretto per CommonJS
@@ -25,16 +25,18 @@ const auth = new google.auth.JWT(
 const sheets = google.sheets({ version: "v4", auth });
 
 // ---- WhatsApp Client ----
+let qrCodeData = null;
+
 const client = new Client({
-  authStrategy: new LocalAuth(), // sessione locale (si resetta se Render riavvia)
+  authStrategy: new LocalAuth(),
   puppeteer: {
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   },
 });
 
 client.on("qr", (qr) => {
-  console.log("Scan questo QR per collegare il bot:");
-  qrcode.generate(qr, { small: true });
+  qrCodeData = qr; // salva il QR per la pagina web
+  console.log("QR generato, apri /qr nel browser per scansionarlo!");
 });
 
 client.on("ready", () => {
@@ -44,7 +46,6 @@ client.on("ready", () => {
 client.on("message", async (msg) => {
   console.log(`Messaggio da ${msg.from}: ${msg.body}`);
 
-  // Formato: "Tipo;Categoria;Importo", es: "Spesa;Cibo;25.30"
   const parts = msg.body.split(";");
   if (parts.length >= 3) {
     const tipo = parts[0].trim();
@@ -71,8 +72,29 @@ client.on("message", async (msg) => {
   }
 });
 
-// ---- Server Express (per healthcheck Render) ----
+// ---- Server Express (per healthcheck e QR) ----
 app.get("/", (req, res) => res.send("Bot attivo 🚀"));
+
+app.get("/qr", async (req, res) => {
+  if (!qrCodeData) {
+    return res.send("QR non ancora generato. Riavvia il servizio o attendi qualche secondo.");
+  }
+  try {
+    const dataUrl = await QRCode.toDataURL(qrCodeData);
+    res.send(`
+      <html>
+        <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;">
+          <h2>📱 Scansiona il QR con WhatsApp del bot</h2>
+          <img src="${dataUrl}" />
+          <p>Il QR scompare quando il bot è autenticato.</p>
+        </body>
+      </html>
+    `);
+  } catch (err) {
+    res.send("Errore nella generazione del QR");
+  }
+});
+
 app.listen(port, () => console.log(`Server in ascolto su ${port}`));
 
 // ---- Avvio Client ----
