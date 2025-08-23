@@ -11,7 +11,7 @@ const port = process.env.PORT || 3000;
 
 // ---- Config Google Sheets ----
 const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM"; // tuo ID
-const SHEET_RANGE = "spese!A1"; // correggiamo qui per append automatico
+const SHEET_RANGE = "spese"; // solo nome foglio
 
 const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
 
@@ -47,11 +47,15 @@ client.on("message", async (msg) => {
   console.log(`Messaggio da ${msg.from}: ${msg.body}`);
 
   const parts = msg.body.split(";");
-  if (parts.length >= 3) {
-    const tipo = parts[0].trim();
-    const categoria = parts[1].trim();
-    const importo = parts[2].trim();
-    const data = new Date().toISOString().split("T")[0];
+  if (parts.length === 2) {
+    // Caso: solo Importo;Categoria
+    const importoRaw = parts[0].trim();
+    const categoria = parts[11].trim();
+    const tipo = "Spesa";
+    const data = new Date().toISOString().split("T");
+
+    // Pulisci importo: sostituisci virgola con punto, elimina simboli non numerici
+    const importo = importoRaw.replace(",", ".").replace(/[^\d.]/g, "");
 
     try {
       await sheets.spreadsheets.values.append({
@@ -68,7 +72,7 @@ client.on("message", async (msg) => {
       await msg.reply("❌ Errore nel salvataggio su Google Sheets.");
     }
   } else {
-    await msg.reply("Formato non valido. Usa: Tipo;Categoria;Importo");
+    await msg.reply("Formato non valido. Usa: Importo;Categoria");
   }
 });
 
