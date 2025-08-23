@@ -1,14 +1,17 @@
 import express from "express";
 import qrcode from "qrcode-terminal";
-import { Client, LocalAuth } from "whatsapp-web.js";
 import { google } from "googleapis";
+
+// Import corretto per CommonJS
+import pkg from "whatsapp-web.js";
+const { Client, LocalAuth } = pkg;
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // ---- Config Google Sheets ----
-const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM"; // <-- tuo ID
-const SHEET_RANGE = "spese!A:D"; // <-- nome foglio "spese"
+const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM"; // tuo ID
+const SHEET_RANGE = "spese!A:D"; // nome foglio "spese"
 
 const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
 
@@ -23,7 +26,7 @@ const sheets = google.sheets({ version: "v4", auth });
 
 // ---- WhatsApp Client ----
 const client = new Client({
-  authStrategy: new LocalAuth(), // tiene sessione locale (ma su Render si resetta se riavvii)
+  authStrategy: new LocalAuth(), // sessione locale (si resetta se Render riavvia)
   puppeteer: {
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   },
@@ -41,12 +44,12 @@ client.on("ready", () => {
 client.on("message", async (msg) => {
   console.log(`Messaggio da ${msg.from}: ${msg.body}`);
 
-  // Esempio formato: "Spesa;Cibo;25.30"
+  // Formato: "Tipo;Categoria;Importo", es: "Spesa;Cibo;25.30"
   const parts = msg.body.split(";");
   if (parts.length >= 3) {
-    const tipo = parts[0];
-    const categoria = parts[1];
-    const importo = parts[2];
+    const tipo = parts[0].trim();
+    const categoria = parts[1].trim();
+    const importo = parts[2].trim();
     const data = new Date().toISOString().split("T")[0];
 
     try {
@@ -58,17 +61,17 @@ client.on("message", async (msg) => {
           values: [[tipo, data, importo, categoria]],
         },
       });
-      msg.reply("✅ Registrato su Google Sheets!");
+      await msg.reply("✅ Registrato su Google Sheets!");
     } catch (err) {
       console.error("Errore Google Sheets:", err);
-      msg.reply("❌ Errore nel salvataggio su Google Sheets.");
+      await msg.reply("❌ Errore nel salvataggio su Google Sheets.");
     }
   } else {
-    msg.reply("Formato non valido. Usa: Tipo;Categoria;Importo");
+    await msg.reply("Formato non valido. Usa: Tipo;Categoria;Importo");
   }
 });
 
-// ---- Server Express (per Render healthcheck) ----
+// ---- Server Express (per healthcheck Render) ----
 app.get("/", (req, res) => res.send("Bot attivo 🚀"));
 app.listen(port, () => console.log(`Server in ascolto su ${port}`));
 
