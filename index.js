@@ -76,7 +76,7 @@ client.on("message", async (msg) => {
   const categoria = parts.slice(1).join(" ");
 
   const tipo = "Spesa";
-  const data = new Date().toISOString().split("T");
+  const data = new Date().toISOString().split("T")[0];
   const importo = importoRaw.replace(",", ".").replace(/[^\d.]/g, "");
 
   console.log(`[DEBUG] Pronto per registrare su Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
@@ -124,3 +124,4 @@ app.get("/qr", async (req, res) => {
 app.listen(port, () => console.log(`Server in ascolto su ${port}`));
 
 client.initialize();
+
