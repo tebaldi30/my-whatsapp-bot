@@ -9,8 +9,8 @@ const port = process.env.PORT || 3000;
 
 // ---- Config Google Sheets ----
 const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM";
-// Usa solo il nome foglio senza colonne
-const SHEET_RANGE = "spese";
+// Qui usiamo il nome esatto del foglio: Página1
+const SHEET_RANGE = "Página1!A:D";
 
 const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
 
@@ -124,4 +124,3 @@ app.get("/qr", async (req, res) => {
 app.listen(port, () => console.log(`Server in ascolto su ${port}`));
 
 client.initialize();
-
