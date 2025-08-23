@@ -1,8 +1,6 @@
 import express from "express";
 import QRCode from "qrcode";
 import { google } from "googleapis";
-
-// Import corretto per CommonJS
 import pkg from "whatsapp-web.js";
 const { Client, LocalAuth } = pkg;
 
@@ -10,9 +8,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ---- Config Google Sheets ----
-const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM"; // tuo ID
-const SHEET_RANGE = "spese"; // solo nome foglio
-
+const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM";
+const SHEET_RANGE = "spese"; // solo nome del foglio
 const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
 
 const auth = new google.auth.JWT(
@@ -35,28 +32,41 @@ const client = new Client({
 });
 
 client.on("qr", (qr) => {
-  qrCodeData = qr; // salva il QR per la pagina web
+  qrCodeData = qr;
   console.log("QR generato, apri /qr nel browser per scansionarlo!");
 });
 
-client.on("ready", () => {
-  console.log("🤖 Bot connesso e pronto!");
+client.on("authenticated", () => {
+  console.log("✅ Autenticazione avvenuta");
 });
 
-client.on("message", async (msg) => {
-  console.log(`Messaggio da ${msg.from}: ${msg.body}`);
+client.on("ready", async () => {
+  console.log("🤖 Bot connesso e pronto!");
+  try {
+    const state = await client.getState();
+    console.log("Stato Client:", state);
+  } catch (e) {
+    console.log("Impossibile ottenere lo stato client:", e);
+  }
+});
 
+client.on("disconnected", (reason) => {
+  console.log("❌ Disconnesso:", reason);
+});
+
+// EVENTO MESSAGE - LOG, VALIDAZIONE E REGISTRAZIONE
+client.on("message", async (msg) => {
+  console.log(`Messaggio ricevuto da ${msg.from}: "${msg.body}"`);
   const parts = msg.body.split(";");
   if (parts.length === 2) {
     // Caso: solo Importo;Categoria
     const importoRaw = parts[0].trim();
-    const categoria = parts[11].trim();
+    const categoria = parts[10].trim();
     const tipo = "Spesa";
     const data = new Date().toISOString().split("T");
-
     // Pulisci importo: sostituisci virgola con punto, elimina simboli non numerici
     const importo = importoRaw.replace(",", ".").replace(/[^\d.]/g, "");
-
+    console.log(`[DEBUG] Pronto per registrare su Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
     try {
       await sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
@@ -66,12 +76,14 @@ client.on("message", async (msg) => {
           values: [[tipo, data, importo, categoria]],
         },
       });
+      console.log(`[OK] Riga registrata su Google Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
       await msg.reply("✅ Registrato su Google Sheets!");
     } catch (err) {
-      console.error("Errore Google Sheets:", err);
+      console.error("Errore Google Sheets:", err?.message || err);
       await msg.reply("❌ Errore nel salvataggio su Google Sheets.");
     }
   } else {
+    console.log("[WARN] Formato non valido ricevuto:", msg.body);
     await msg.reply("Formato non valido. Usa: Importo;Categoria");
   }
 });
