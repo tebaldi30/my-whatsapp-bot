@@ -11,7 +11,7 @@ const port = process.env.PORT || 3000;
 
 // ---- Config Google Sheets ----
 const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM"; // tuo ID
-const SHEET_RANGE = "spese!A:D"; // nome foglio "spese"
+const SHEET_RANGE = "spese!A1"; // correggiamo qui per append automatico
 
 const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
 
