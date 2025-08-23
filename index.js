@@ -61,7 +61,7 @@ client.on("message", async (msg) => {
   console.log(`Messaggio ricevuto da ${msg.from}: "${msg.body}"`);
   if (!msg.body) {
     console.log("[WARN] Messaggio vuoto ricevuto.");
-    await msg.reply("Formato non valido. Usa: Importo Categoria");
+    await msg.reply("Formato inserito non valido. Usa: Importo Categoria");
     return;
   }
 
@@ -91,7 +91,7 @@ client.on("message", async (msg) => {
       },
     });
     console.log(`[OK] Riga registrata su Google Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
-    await msg.reply("✅ Registrato su Google Sheets!");
+    await msg.reply("✅ Spesa Registrata!");
   } catch (err) {
     console.error("Errore Google Sheets:", err?.message || err);
     await msg.reply("❌ Errore nel salvataggio su Google Sheets.");
@@ -124,3 +124,4 @@ app.get("/qr", async (req, res) => {
 app.listen(port, () => console.log(`Server in ascolto su ${port}`));
 
 client.initialize();
+
