@@ -59,19 +59,22 @@ client.on("message", async (msg) => {
   console.log(`Messaggio ricevuto da ${msg.from}: "${msg.body}"`);
   if (!msg.body) {
     console.log("[WARN] Messaggio vuoto ricevuto.");
-    await msg.reply("Formato non valido. Usa: Importo;Categoria");
+    await msg.reply("Formato non valido. Usa: Importo Categoria");
     return;
   }
 
-  const parts = msg.body.split(";").map(val => val && val.trim());
-  if (parts.length !== 2 || !parts[0] || !parts[11]) {
+  // split su uno o più spazi
+  const parts = msg.body.trim().split(/\s+/);
+  if (parts.length < 2) {
     console.log("[WARN] Formato non valido o campo mancante:", msg.body, parts);
-    await msg.reply("Formato non valido. Usa: Importo;Categoria");
+    await msg.reply("Formato non valido. Usa: Importo Categoria");
     return;
   }
 
+  // importo è prima parola, categoria tutto il resto unito per esempio "super mercato"
   const importoRaw = parts[0];
-  const categoria = parts[11];
+  const categoria = parts.slice(1).join(" "); 
+
   const tipo = "Spesa";
   const data = new Date().toISOString().split("T");
   const importo = importoRaw.replace(",", ".").replace(/[^\d.]/g, "");
