@@ -9,8 +9,8 @@ const port = process.env.PORT || 3000;
 
 // ---- Config Google Sheets ----
 const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM";
-// Modifica qui il range specificando colonne da A a D
-const SHEET_RANGE = "spese!A:D";
+// Usa solo il nome foglio senza colonne
+const SHEET_RANGE = "spese";
 
 const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
 
@@ -56,6 +56,7 @@ client.on("disconnected", (reason) => {
   console.log("❌ Disconnesso:", reason);
 });
 
+// EVENTO MESSAGE - LOG, VALIDAZIONE E REGISTRAZIONE
 client.on("message", async (msg) => {
   console.log(`Messaggio ricevuto da ${msg.from}: "${msg.body}"`);
   if (!msg.body) {
@@ -64,7 +65,6 @@ client.on("message", async (msg) => {
     return;
   }
 
-  // Divide il messaggio in base a uno o più spazi
   const parts = msg.body.trim().split(/\s+/);
   if (parts.length < 2) {
     console.log("[WARN] Formato non valido o campo mancante:", msg.body, parts);
@@ -76,7 +76,7 @@ client.on("message", async (msg) => {
   const categoria = parts.slice(1).join(" ");
 
   const tipo = "Spesa";
-  const data = new Date().toISOString().split("T")[0];
+  const data = new Date().toISOString().split("T");
   const importo = importoRaw.replace(",", ".").replace(/[^\d.]/g, "");
 
   console.log(`[DEBUG] Pronto per registrare su Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
@@ -91,7 +91,7 @@ client.on("message", async (msg) => {
       },
     });
     console.log(`[OK] Riga registrata su Google Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
-    await msg.reply("✅ Spesa Registrata!");
+    await msg.reply("✅ Registrato su Google Sheets!");
   } catch (err) {
     console.error("Errore Google Sheets:", err?.message || err);
     await msg.reply("❌ Errore nel salvataggio su Google Sheets.");
