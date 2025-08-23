@@ -9,7 +9,7 @@ const port = process.env.PORT || 3000;
 
 // ---- Config Google Sheets ----
 const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM";
-const SHEET_RANGE = "spese"; // solo nome del foglio
+const SHEET_RANGE = "spese";
 const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
 
 const auth = new google.auth.JWT(
@@ -57,34 +57,40 @@ client.on("disconnected", (reason) => {
 // EVENTO MESSAGE - LOG, VALIDAZIONE E REGISTRAZIONE
 client.on("message", async (msg) => {
   console.log(`Messaggio ricevuto da ${msg.from}: "${msg.body}"`);
-  const parts = msg.body.split(";");
-  if (parts.length === 2) {
-    // Caso: solo Importo;Categoria
-    const importoRaw = parts[0].trim();
-    const categoria = parts[10].trim();
-    const tipo = "Spesa";
-    const data = new Date().toISOString().split("T");
-    // Pulisci importo: sostituisci virgola con punto, elimina simboli non numerici
-    const importo = importoRaw.replace(",", ".").replace(/[^\d.]/g, "");
-    console.log(`[DEBUG] Pronto per registrare su Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
-    try {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: SHEET_ID,
-        range: SHEET_RANGE,
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [[tipo, data, importo, categoria]],
-        },
-      });
-      console.log(`[OK] Riga registrata su Google Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
-      await msg.reply("✅ Registrato su Google Sheets!");
-    } catch (err) {
-      console.error("Errore Google Sheets:", err?.message || err);
-      await msg.reply("❌ Errore nel salvataggio su Google Sheets.");
-    }
-  } else {
-    console.log("[WARN] Formato non valido ricevuto:", msg.body);
+  if (!msg.body) {
+    console.log("[WARN] Messaggio vuoto ricevuto.");
     await msg.reply("Formato non valido. Usa: Importo;Categoria");
+    return;
+  }
+
+  const parts = msg.body.split(";").map(val => val && val.trim());
+  if (parts.length !== 2 || !parts[0] || !parts[11]) {
+    console.log("[WARN] Formato non valido o campo mancante:", msg.body, parts);
+    await msg.reply("Formato non valido. Usa: Importo;Categoria");
+    return;
+  }
+
+  const importoRaw = parts[0];
+  const categoria = parts[11];
+  const tipo = "Spesa";
+  const data = new Date().toISOString().split("T");
+  const importo = importoRaw.replace(",", ".").replace(/[^\d.]/g, "");
+
+  console.log(`[DEBUG] Pronto per registrare su Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
+  try {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: SHEET_RANGE,
+      valueInputOption: "USER_ENTERED",
+      requestBody: {
+        values: [[tipo, data, importo, categoria]],
+      },
+    });
+    console.log(`[OK] Riga registrata su Google Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
+    await msg.reply("✅ Registrato su Google Sheets!");
+  } catch (err) {
+    console.error("Errore Google Sheets:", err?.message || err);
+    await msg.reply("❌ Errore nel salvataggio su Google Sheets.");
   }
 });
 
