@@ -9,7 +9,9 @@ const port = process.env.PORT || 3000;
 
 // ---- Config Google Sheets ----
 const SHEET_ID = "1Wf8A8BkTPJGrQmJca35_Spsbj1HJxmZoLffkreqGkrM";
-const SHEET_RANGE = "spese";
+// Modifica qui il range specificando colonne da A a D
+const SHEET_RANGE = "spese!A:D";
+
 const credentials = JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON);
 
 const auth = new google.auth.JWT(
@@ -54,7 +56,6 @@ client.on("disconnected", (reason) => {
   console.log("❌ Disconnesso:", reason);
 });
 
-// EVENTO MESSAGE - LOG, VALIDAZIONE E REGISTRAZIONE
 client.on("message", async (msg) => {
   console.log(`Messaggio ricevuto da ${msg.from}: "${msg.body}"`);
   if (!msg.body) {
@@ -63,7 +64,7 @@ client.on("message", async (msg) => {
     return;
   }
 
-  // split su uno o più spazi
+  // Divide il messaggio in base a uno o più spazi
   const parts = msg.body.trim().split(/\s+/);
   if (parts.length < 2) {
     console.log("[WARN] Formato non valido o campo mancante:", msg.body, parts);
@@ -71,15 +72,15 @@ client.on("message", async (msg) => {
     return;
   }
 
-  // importo è prima parola, categoria tutto il resto unito per esempio "super mercato"
   const importoRaw = parts[0];
-  const categoria = parts.slice(1).join(" "); 
+  const categoria = parts.slice(1).join(" ");
 
   const tipo = "Spesa";
-  const data = new Date().toISOString().split("T");
+  const data = new Date().toISOString().split("T")[0];
   const importo = importoRaw.replace(",", ".").replace(/[^\d.]/g, "");
 
   console.log(`[DEBUG] Pronto per registrare su Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
+
   try {
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
@@ -90,7 +91,7 @@ client.on("message", async (msg) => {
       },
     });
     console.log(`[OK] Riga registrata su Google Sheets: ${[tipo, data, importo, categoria].join(", ")}`);
-    await msg.reply("✅ Registrato su Google Sheets!");
+    await msg.reply("✅ Spesa Registrata!");
   } catch (err) {
     console.error("Errore Google Sheets:", err?.message || err);
     await msg.reply("❌ Errore nel salvataggio su Google Sheets.");
@@ -122,5 +123,4 @@ app.get("/qr", async (req, res) => {
 
 app.listen(port, () => console.log(`Server in ascolto su ${port}`));
 
-// ---- Avvio Client ----
 client.initialize();
